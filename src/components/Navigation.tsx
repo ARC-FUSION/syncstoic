@@ -3,15 +3,18 @@ import { LayoutDashboard, BookOpen, User, Zap } from 'lucide-react';
 
 export default function Navigation() {
   const location = useLocation();
-  
+
   // Don't show nav on auth, landing, or course detail pages
-  if (location.pathname === '/' || location.pathname === '/auth' || location.pathname.startsWith('/course/')) {
+  if (
+    location.pathname === '/' ||
+    location.pathname === '/auth' ||
+    location.pathname.startsWith('/course/')
+  ) {
     return null;
   }
 
   const navItems = [
-    { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-    { path: '/catalog', icon: BookOpen, label: 'Catalog' },
+    { path: '/courses', icon: BookOpen, label: 'Catalog' },
   ];
 
   return (
@@ -19,7 +22,7 @@ export default function Navigation() {
       <div className="max-w-7xl mx-auto px-6">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link to="/dashboard" className="flex items-center gap-2.5">
+          <Link to="/" className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center shadow-lg shadow-primary-500/10">
               <Zap className="w-5 h-5 text-white" />
             </div>
@@ -45,7 +48,10 @@ export default function Navigation() {
           </div>
 
           {/* User */}
-          <Link to="/auth" className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/5 transition-colors">
+          <Link
+            to="/auth"
+            className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/5 transition-colors"
+          >
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center">
               <User className="w-4 h-4 text-white" />
             </div>
