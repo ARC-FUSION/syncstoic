@@ -1,20 +1,24 @@
 import { Link, useLocation } from 'react-router-dom';
 import { LayoutDashboard, BookOpen, User, Zap } from 'lucide-react';
+import { useAuth } from '../hooks/useAuth';
 
 export default function Navigation() {
   const location = useLocation();
+  const { user, isAuthenticated } = useAuth();
 
   // Don't show nav on auth, landing, or course detail pages
   if (
     location.pathname === '/' ||
-    location.pathname === '/auth' ||
+    location.pathname === '/login' ||
+    location.pathname === '/register' ||
     location.pathname.startsWith('/course/')
   ) {
     return null;
   }
 
   const navItems = [
-    { path: '/courses', icon: BookOpen, label: 'Catalog' },
+    { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', protected: true },
+    { path: '/courses', icon: BookOpen, label: 'Catalog', protected: false },
   ];
 
   return (
@@ -48,14 +52,31 @@ export default function Navigation() {
           </div>
 
           {/* User */}
-          <Link
-            to="/auth"
-            className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/5 transition-colors"
-          >
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center">
-              <User className="w-4 h-4 text-white" />
-            </div>
-          </Link>
+          {isAuthenticated ? (
+            <Link
+              to="/profile"
+              className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/5 transition-colors"
+            >
+              {user?.avatar ? (
+                <img
+                  src={user.avatar}
+                  alt={user.name}
+                  className="w-8 h-8 rounded-full object-cover"
+                />
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center">
+                  <User className="w-4 h-4 text-white" />
+                </div>
+              )}
+            </Link>
+          ) : (
+            <Link
+              to="/login"
+              className="flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium rounded-lg transition-colors"
+            >
+              Sign In
+            </Link>
+          )}
         </div>
       </div>
     </nav>
