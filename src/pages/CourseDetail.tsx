@@ -1,11 +1,12 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { courses } from '../data/courses';
 import { Course, Lesson } from '../types';
-import DistractionFreePlayer from '../components/DistractionFreePlayer';
+import DistractionFreePlayer from '../components/player/DistractionFreePlayer';
+import { isLessonCompleted } from '../hooks/useProgressTracking';
 import { 
   ArrowLeft, CheckCircle2, Circle, Play, Clock, 
-  ChevronDown, ChevronRight, Lock, Award
+  ChevronDown, ChevronRight, Award
 } from 'lucide-react';
 
 export default function CourseDetail() {
@@ -13,7 +14,7 @@ export default function CourseDetail() {
   const [course, setCourse] = useState<Course | null>(null);
   const [activeLesson, setActiveLesson] = useState<Lesson | null>(null);
   const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set());
-  const [lessonProgress, setLessonProgress] = useState<Record<string, { currentTime: number; duration: number }>>({});
+  const [completedLessonsLocal, setCompletedLessonsLocal] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const found = courses.find(c => c.id === id);
@@ -43,39 +44,6 @@ export default function CourseDetail() {
     });
   };
 
-  const handleProgress = useCallback((currentTime: number, duration: number) => {
-    if (activeLesson) {
-      setLessonProgress(prev => ({
-        ...prev,
-        [activeLesson.id]: { currentTime, duration }
-      }));
-    }
-  }, [activeLesson]);
-
-  const handleLessonEnd = useCallback(() => {
-    if (!course || !activeLesson) return;
-    
-    // Mark as completed
-    setCourse(prev => {
-      if (!prev) return prev;
-      const updated = { ...prev };
-      updated.modules = updated.modules.map(mod => ({
-        ...mod,
-        lessons: mod.lessons.map(l => 
-          l.id === activeLesson.id ? { ...l, completed: true, progress: 100 } : l
-        )
-      }));
-      return updated;
-    });
-
-    // Auto-advance to next lesson
-    const allLessons = course.modules.flatMap(m => m.lessons);
-    const currentIndex = allLessons.findIndex(l => l.id === activeLesson.id);
-    if (currentIndex < allLessons.length - 1) {
-      setActiveLesson(allLessons[currentIndex + 1]);
-    }
-  }, [course, activeLesson]);
-
   const handleSelectLesson = (lesson: Lesson) => {
     setActiveLesson(lesson);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -90,14 +58,13 @@ export default function CourseDetail() {
   }
 
   const totalLessons = course.modules.reduce((acc, m) => acc + m.lessons.length, 0);
-  const completedLessons = course.modules.reduce((acc, m) => acc + m.lessons.filter(l => l.completed).length, 0);
+  const completedLessons = course.modules.reduce((acc, m) => acc + m.lessons.filter(l => l.completed || completedLessonsLocal.has(l.id)).length, 0);
   const overallProgress = Math.round((completedLessons / totalLessons) * 100);
 
   const getLessonStatus = (lesson: Lesson) => {
-    if (lesson.completed) return 'completed';
+    if (lesson.completed || completedLessonsLocal.has(lesson.id)) return 'completed';
     if (lesson.id === activeLesson.id) return 'active';
-    const progress = lessonProgress[lesson.id];
-    if (progress && progress.currentTime > 0) return 'in-progress';
+    if (isLessonCompleted(course.id, lesson.id)) return 'completed';
     return 'locked';
   };
 
@@ -142,10 +109,9 @@ export default function CourseDetail() {
             <div className="sticky top-[57px]">
               <DistractionFreePlayer
                 videoId={activeLesson.youtubeId}
+                courseId={course.id}
+                lessonId={activeLesson.id}
                 title={activeLesson.title}
-                startSeconds={activeLesson.lastPosition > 10 ? activeLesson.lastPosition : 0}
-                onProgress={handleProgress}
-                onEnd={handleLessonEnd}
               />
               {/* Lesson info below player */}
               <div className="px-4 py-4 border-b border-white/5">
@@ -201,7 +167,6 @@ export default function CourseDetail() {
                     <div className="pb-2">
                       {module.lessons.map((lesson, lessonIndex) => {
                         const status = getLessonStatus(lesson);
-                        const progress = lessonProgress[lesson.id];
                         
                         return (
                           <button
@@ -221,17 +186,6 @@ export default function CourseDetail() {
                                 <div className="w-5 h-5 rounded-full border-2 border-primary-500 flex items-center justify-center">
                                   <Play className="w-2.5 h-2.5 text-primary-500 ml-0.5" fill="currentColor" />
                                 </div>
-                              ) : status === 'in-progress' ? (
-                                <div className="w-5 h-5 rounded-full border-2 border-amber-400/50 flex items-center justify-center relative">
-                                  <svg className="w-5 h-5 absolute" viewBox="0 0 20 20">
-                                    <circle cx="10" cy="10" r="8" fill="none" stroke="rgba(251,191,36,0.3)" strokeWidth="2" />
-                                    <circle 
-                                      cx="10" cy="10" r="8" fill="none" stroke="rgb(251,191,36)" strokeWidth="2"
-                                      strokeDasharray={`${(progress ? (progress.currentTime / progress.duration) * 50.2 : 0)} 50.2`}
-                                      transform="rotate(-90 10 10)"
-                                    />
-                                  </svg>
-                                </div>
                               ) : (
                                 <Circle className="w-5 h-5 text-white/20" />
                               )}
@@ -246,11 +200,6 @@ export default function CourseDetail() {
                               </p>
                               <p className="text-white/30 text-xs mt-0.5">
                                 {Math.floor(lesson.duration / 60)} min
-                                {progress && progress.currentTime > 0 && !lesson.completed && (
-                                  <span className="ml-2 text-amber-400/60">
-                    • {Math.floor(progress.currentTime / 60)}:{String(Math.floor(progress.currentTime % 60)).padStart(2, '0')} watched
-                  </span>
-                                )}
                               </p>
                             </div>
                           </button>

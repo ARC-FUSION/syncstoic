@@ -5,6 +5,7 @@ import Dashboard from './pages/Dashboard';
 import Catalog from './pages/Catalog';
 import CourseDetail from './pages/CourseDetail';
 import Auth from './pages/Auth';
+import PlayerDemo from './pages/PlayerDemo';
 
 function App() {
   return (
@@ -15,6 +16,7 @@ function App() {
         <Route path="/catalog" element={<><Navigation /><Catalog /></>} />
         <Route path="/course/:id" element={<CourseDetail />} />
         <Route path="/auth" element={<Auth />} />
+        <Route path="/player" element={<PlayerDemo />} />
       </Routes>
     </HashRouter>
   );
