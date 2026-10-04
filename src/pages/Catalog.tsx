@@ -1,9 +1,12 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { seedCourses } from '../lib/data/seed';
 import { Difficulty, SortOption } from '../lib/types';
 import { formatDuration, formatNumber, getYouTubeThumbnail } from '../lib/utils';
 import { Search, Filter, Clock, BookOpen, Users, ChevronDown } from 'lucide-react';
+import { GridSkeleton } from '../components/ui/Skeleton';
+import { PageTransition, StaggerContainer, StaggerItem } from '../components/ui/PageTransition';
 
 const difficulties: Difficulty[] = ['beginner', 'intermediate', 'advanced'];
 const sortOptions: { value: SortOption; label: string }[] = [
@@ -15,6 +18,12 @@ const sortOptions: { value: SortOption; label: string }[] = [
 export default function Catalog() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [showSortDropdown, setShowSortDropdown] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setIsLoading(false), 500);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Read filters from URL
   const query = searchParams.get('q') || '';
@@ -94,16 +103,17 @@ export default function Catalog() {
   };
 
   return (
-    <div className="min-h-screen bg-surface">
-      {/* Header */}
-      <div className="border-b border-white/5 bg-surface-light/50 backdrop-blur-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
-          <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Course Catalog</h1>
-          <p className="text-white/60 text-sm sm:text-base">
-            Discover structured courses from YouTube playlists
-          </p>
+    <PageTransition>
+      <div className="min-h-screen bg-surface pb-20 md:pb-0">
+        {/* Header */}
+        <div className="border-b border-white/5 bg-surface-light/50 backdrop-blur-sm">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+            <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Course Catalog</h1>
+            <p className="text-white/60 text-sm sm:text-base">
+              Discover structured courses from YouTube playlists
+            </p>
+          </div>
         </div>
-      </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
         {/* Filters */}
@@ -218,9 +228,13 @@ export default function Catalog() {
         </div>
 
         {/* Course Grid */}
-        {filteredCourses.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredCourses.map((course) => (
+        {isLoading ? (
+          <GridSkeleton count={6} />
+        ) : filteredCourses.length > 0 ? (
+          <StaggerContainer>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredCourses.map((course) => (
+                <StaggerItem key={course.id}>
               <Link
                 key={course.id}
                 to={`/course/${course.slug}`}
@@ -288,8 +302,10 @@ export default function Catalog() {
                   </div>
                 </div>
               </Link>
-            ))}
-          </div>
+                </StaggerItem>
+              ))}
+            </div>
+          </StaggerContainer>
         ) : (
           /* Empty State */
           <div className="text-center py-16">
@@ -309,6 +325,7 @@ export default function Catalog() {
           </div>
         )}
       </div>
-    </div>
+      </div>
+    </PageTransition>
   );
 }
