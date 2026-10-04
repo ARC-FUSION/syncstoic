@@ -21,11 +21,11 @@ export default function Landing() {
               <span className="text-white font-bold text-xl">SyncFocus</span>
             </div>
             <div className="flex items-center gap-3">
-              <Link to="/auth" className="text-white/60 hover:text-white text-sm transition-colors">
+              <Link to="/login" className="text-white/60 hover:text-white text-sm transition-colors">
                 Sign in
               </Link>
               <Link
-                to="/courses"
+                to="/register"
                 className="bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium px-5 py-2.5 rounded-xl transition-all hover:shadow-lg hover:shadow-primary-500/20"
               >
                 Get Started
