@@ -25,7 +25,7 @@ export default function Landing() {
                 Sign in
               </Link>
               <Link
-                to="/dashboard"
+                to="/courses"
                 className="bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium px-5 py-2.5 rounded-xl transition-all hover:shadow-lg hover:shadow-primary-500/20"
               >
                 Get Started
@@ -55,14 +55,14 @@ export default function Landing() {
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-10">
               <Link
-                to="/dashboard"
+                to="/courses"
                 className="group flex items-center gap-2 bg-primary-600 hover:bg-primary-500 text-white font-medium px-8 py-4 rounded-2xl transition-all hover:shadow-xl hover:shadow-primary-500/20 text-lg"
               >
                 Start Learning Free
                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </Link>
               <Link
-                to="/course/react-mastery"
+                to="/course/react-fundamentals"
                 className="flex items-center gap-2 bg-white/5 border border-white/10 text-white font-medium px-8 py-4 rounded-2xl hover:bg-white/10 transition-all"
               >
                 <Play className="w-5 h-5" fill="white" />
@@ -180,7 +180,7 @@ export default function Landing() {
               Join thousands of learners who've transformed their YouTube watching into structured learning.
             </p>
             <Link
-              to="/dashboard"
+              to="/courses"
               className="inline-flex items-center gap-2 bg-white text-surface font-semibold px-8 py-4 rounded-2xl hover:bg-white/90 transition-all hover:shadow-xl text-lg"
             >
               Get Started — It's Free
