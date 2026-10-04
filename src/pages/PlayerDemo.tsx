@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Keyboard, Info } from 'lucide-react';
-import DistractionFreePlayer from '../components/player/DistractionFreePlayer';
+import YouTubePlayer from '../components/player/YouTubePlayer';
 
 /**
  * PlayerDemo — Isolated test page for the distraction-free player.
@@ -32,7 +32,7 @@ export default function PlayerDemo() {
 
       {/* Player */}
       <div className="max-w-5xl mx-auto px-4 py-6">
-        <DistractionFreePlayer
+        <YouTubePlayer
           videoId="dQw4w9WgXcQ"
           courseId="demo"
           lessonId="demo-lesson-1"

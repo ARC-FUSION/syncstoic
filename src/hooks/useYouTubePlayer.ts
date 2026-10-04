@@ -1,6 +1,31 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { PlayerStatus, PlayerError, PlayerErrorType, PlaybackSpeed, PLAYBACK_SPEEDS } from '../types/player';
+import { loadYouTubeAPI } from '../lib/youtube';
 
+/**
+ * Player status enum — maps to YouTube's PlayerState
+ */
+export enum PlayerStatus {
+  LOADING = 'LOADING',
+  UNSTARTED = 'UNSTARTED',
+  ENDED = 'ENDED',
+  PLAYING = 'PLAYING',
+  PAUSED = 'PAUSED',
+  BUFFERING = 'BUFFERING',
+  CUED = 'CUED',
+  ERROR = 'ERROR',
+}
+
+/**
+ * Player error type
+ */
+export interface PlayerError {
+  code: number;
+  message: string;
+}
+
+/**
+ * Hook options
+ */
 interface UseYouTubePlayerOptions {
   videoId: string;
   startSeconds?: number;
@@ -8,6 +33,9 @@ interface UseYouTubePlayerOptions {
   onError?: (error: PlayerError) => void;
 }
 
+/**
+ * Hook return type
+ */
 interface UseYouTubePlayerReturn {
   containerRef: React.RefObject<HTMLDivElement | null>;
   playerRef: React.RefObject<YT.Player | null>;
@@ -18,7 +46,7 @@ interface UseYouTubePlayerReturn {
   currentTime: number;
   duration: number;
   volume: number;
-  playbackRate: PlaybackSpeed;
+  playbackRate: number;
   buffered: number;
   error: PlayerError | null;
   play: () => void;
@@ -28,90 +56,58 @@ interface UseYouTubePlayerReturn {
   seekBy: (offset: number) => void;
   setVolume: (level: number) => void;
   toggleMute: () => void;
-  setPlaybackRate: (rate: PlaybackSpeed) => void;
+  setPlaybackRate: (rate: number) => void;
   cyclePlaybackRate: () => void;
-  getPlayer: () => YT.Player | null;
 }
 
-/** Load the YouTube IFrame API script exactly once */
-function loadYouTubeAPI(): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (window.YT && window.YT.Player) {
-      resolve();
-      return;
-    }
-
-    // Check if script is already loading
-    const existingScript = document.querySelector('script[src*="youtube.com/iframe_api"]');
-    if (existingScript) {
-      const checkReady = setInterval(() => {
-        if (window.YT && window.YT.Player) {
-          clearInterval(checkReady);
-          resolve();
-        }
-      }, 100);
-      setTimeout(() => {
-        clearInterval(checkReady);
-        reject(new Error('YouTube API load timeout'));
-      }, 10000);
-      return;
-    }
-
-    const tag = document.createElement('script');
-    tag.src = 'https://www.youtube.com/iframe_api';
-    tag.async = true;
-
-    const firstScript = document.getElementsByTagName('script')[0];
-    if (firstScript.parentNode) {
-      firstScript.parentNode.insertBefore(tag, firstScript);
-    }
-
-    tag.onerror = () => reject(new Error('Failed to load YouTube IFrame API'));
-
-    window.onYouTubeIframeAPIReady = () => {
-      resolve();
-    };
-  });
-}
-
-/** Map YT.PlayerState to our PlayerStatus */
+/**
+ * Map YouTube PlayerState to our PlayerStatus
+ */
 function mapYTState(state: number): PlayerStatus {
   switch (state) {
-    case YT.PlayerState.UNSTARTED: return PlayerStatus.UNSTARTED;
-    case YT.PlayerState.ENDED: return PlayerStatus.ENDED;
-    case YT.PlayerState.PLAYING: return PlayerStatus.PLAYING;
-    case YT.PlayerState.PAUSED: return PlayerStatus.PAUSED;
-    case YT.PlayerState.BUFFERING: return PlayerStatus.BUFFERING;
-    case YT.PlayerState.CUED: return PlayerStatus.CUED;
-    default: return PlayerStatus.UNSTARTED;
-  }
-}
-
-/** Map YT error codes to our error types */
-function mapYTError(code: number): PlayerErrorType {
-  switch (code) {
-    case 2: return PlayerErrorType.VIDEO_NOT_FOUND;
-    case 5: return PlayerErrorType.EMBED_DISABLED;
-    case 100: return PlayerErrorType.VIDEO_NOT_FOUND;
-    case 101: return PlayerErrorType.EMBED_DISABLED;
-    case 150: return PlayerErrorType.EMBED_DISABLED;
-    default: return PlayerErrorType.UNKNOWN;
-  }
-}
-
-function getErrorMessage(type: PlayerErrorType): string {
-  switch (type) {
-    case PlayerErrorType.VIDEO_NOT_FOUND:
-      return 'This video is unavailable or has been removed.';
-    case PlayerErrorType.EMBED_DISABLED:
-      return 'The video owner has disabled embedding.';
-    case PlayerErrorType.API_LOAD_FAILED:
-      return 'Failed to load the video player. Please check your connection.';
+    case YT.PlayerState.UNSTARTED:
+      return PlayerStatus.UNSTARTED;
+    case YT.PlayerState.ENDED:
+      return PlayerStatus.ENDED;
+    case YT.PlayerState.PLAYING:
+      return PlayerStatus.PLAYING;
+    case YT.PlayerState.PAUSED:
+      return PlayerStatus.PAUSED;
+    case YT.PlayerState.BUFFERING:
+      return PlayerStatus.BUFFERING;
+    case YT.PlayerState.CUED:
+      return PlayerStatus.CUED;
     default:
-      return 'An unexpected error occurred. Please try again.';
+      return PlayerStatus.UNSTARTED;
   }
 }
 
+/**
+ * Map YouTube error codes to human-readable messages
+ */
+function getErrorMessage(code: number): string {
+  switch (code) {
+    case 2:
+      return 'Invalid video ID';
+    case 5:
+      return 'HTML5 player error';
+    case 100:
+      return 'Video not found';
+    case 101:
+    case 150:
+      return 'Video owner does not allow embedding';
+    default:
+      return 'Unknown player error';
+  }
+}
+
+/**
+ * YouTube Player Hook
+ *
+ * Manages the lifecycle of a YouTube IFrame Player instance.
+ * Handles loading the API, creating the player, polling state,
+ * and providing control methods.
+ */
 export function useYouTubePlayer({
   videoId,
   startSeconds = 0,
@@ -129,13 +125,16 @@ export function useYouTubePlayer({
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [volume, setVolumeState] = useState(80);
-  const [playbackRate, setPlaybackRateState] = useState<PlaybackSpeed>(1);
+  const [playbackRate, setPlaybackRateState] = useState(1);
   const [buffered, setBuffered] = useState(0);
   const [error, setError] = useState<PlayerError | null>(null);
 
-  // Polling for time/duration updates (since YT API doesn't have events for these)
+  /**
+   * Poll player state every 250ms
+   */
   const startPolling = useCallback(() => {
     if (pollIntervalRef.current) return;
+
     pollIntervalRef.current = setInterval(() => {
       if (playerRef.current && isReady) {
         try {
@@ -144,7 +143,7 @@ export function useYouTubePlayer({
           setBuffered(playerRef.current.getVideoLoadedFraction());
           setIsMuted(playerRef.current.isMuted());
           setVolumeState(playerRef.current.getVolume());
-          setPlaybackRateState(playerRef.current.getPlaybackRate() as PlaybackSpeed);
+          setPlaybackRateState(playerRef.current.getPlaybackRate());
         } catch {
           // Player might be destroyed
         }
@@ -159,25 +158,27 @@ export function useYouTubePlayer({
     }
   }, []);
 
-  // Initialize player
+  /**
+   * Initialize player on mount
+   */
   useEffect(() => {
     let destroyed = false;
 
     const initPlayer = async () => {
       if (!containerRef.current) return;
 
+      // Load YouTube API
       try {
         await loadYouTubeAPI();
-      } catch {
+      } catch (err) {
         if (!destroyed) {
-          const err: PlayerError = {
-            type: PlayerErrorType.API_LOAD_FAILED,
-            message: getErrorMessage(PlayerErrorType.API_LOAD_FAILED),
-            videoId,
+          const error: PlayerError = {
+            code: -1,
+            message: err instanceof Error ? err.message : 'Failed to load YouTube API',
           };
-          setError(err);
+          setError(error);
           setStatus(PlayerStatus.ERROR);
-          onError?.(err);
+          onError?.(error);
         }
         return;
       }
@@ -189,7 +190,7 @@ export function useYouTubePlayer({
         try {
           playerRef.current.destroy();
         } catch {
-          // Ignore destroy errors
+          // Ignore
         }
         playerRef.current = null;
       }
@@ -197,6 +198,7 @@ export function useYouTubePlayer({
       setStatus(PlayerStatus.LOADING);
       setError(null);
 
+      // Create new player
       const player = new window.YT.Player(containerRef.current, {
         width: '100%',
         height: '100%',
@@ -215,7 +217,7 @@ export function useYouTubePlayer({
           start: startSeconds > 0 ? startSeconds : undefined,
         },
         events: {
-          onReady: (event) => {
+          onReady: (event: YT.PlayerEvent) => {
             if (destroyed) return;
             setIsReady(true);
             setStatus(PlayerStatus.CUED);
@@ -224,29 +226,27 @@ export function useYouTubePlayer({
             setIsMuted(event.target.isMuted());
             startPolling();
 
-            // Resume from start position if needed
-            if (startSeconds > 5) {
+            // Seek to start position if needed
+            if (startSeconds > 0) {
               event.target.seekTo(startSeconds, true);
             }
           },
-          onStateChange: (event) => {
+          onStateChange: (event: YT.PlayerEvent) => {
             if (destroyed) return;
             const newStatus = mapYTState(event.data);
             setStatus(newStatus);
             setIsPlaying(newStatus === PlayerStatus.PLAYING);
             onStateChange?.(newStatus);
           },
-          onError: (event) => {
+          onError: (event: YT.OnErrorEvent) => {
             if (destroyed) return;
-            const errorType = mapYTError(event.data);
-            const err: PlayerError = {
-              type: errorType,
-              message: getErrorMessage(errorType),
-              videoId,
+            const playerError: PlayerError = {
+              code: event.data,
+              message: getErrorMessage(event.data),
             };
-            setError(err);
+            setError(playerError);
             setStatus(PlayerStatus.ERROR);
-            onError?.(err);
+            onError?.(playerError);
           },
         },
       });
@@ -270,7 +270,9 @@ export function useYouTubePlayer({
     };
   }, [videoId, startSeconds, onStateChange, onError, startPolling, stopPolling]);
 
-  // Player control methods
+  /**
+   * Control methods
+   */
   const play = useCallback(() => {
     playerRef.current?.playVideo();
   }, []);
@@ -287,16 +289,22 @@ export function useYouTubePlayer({
     }
   }, [isPlaying, play, pause]);
 
-  const seekTo = useCallback((seconds: number) => {
-    if (!playerRef.current) return;
-    const clamped = Math.max(0, Math.min(seconds, duration));
-    playerRef.current.seekTo(clamped, true);
-    setCurrentTime(clamped);
-  }, [duration]);
+  const seekTo = useCallback(
+    (seconds: number) => {
+      if (!playerRef.current) return;
+      const clamped = Math.max(0, Math.min(seconds, duration));
+      playerRef.current.seekTo(clamped, true);
+      setCurrentTime(clamped);
+    },
+    [duration]
+  );
 
-  const seekBy = useCallback((offset: number) => {
-    seekTo(currentTime + offset);
-  }, [currentTime, seekTo]);
+  const seekBy = useCallback(
+    (offset: number) => {
+      seekTo(currentTime + offset);
+    },
+    [currentTime, seekTo]
+  );
 
   const setVolume = useCallback((level: number) => {
     if (!playerRef.current) return;
@@ -320,19 +328,18 @@ export function useYouTubePlayer({
     }
   }, []);
 
-  const setPlaybackRate = useCallback((rate: PlaybackSpeed) => {
+  const setPlaybackRate = useCallback((rate: number) => {
     playerRef.current?.setPlaybackRate(rate);
     setPlaybackRateState(rate);
   }, []);
 
   const cyclePlaybackRate = useCallback(() => {
-    const currentIndex = PLAYBACK_SPEEDS.indexOf(playbackRate);
-    const nextIndex = (currentIndex + 1) % PLAYBACK_SPEEDS.length;
-    const nextRate = PLAYBACK_SPEEDS[nextIndex];
+    const rates = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
+    const currentIndex = rates.indexOf(playbackRate);
+    const nextIndex = (currentIndex + 1) % rates.length;
+    const nextRate = rates[nextIndex];
     setPlaybackRate(nextRate);
   }, [playbackRate, setPlaybackRate]);
-
-  const getPlayer = useCallback(() => playerRef.current, []);
 
   return {
     containerRef,
@@ -356,6 +363,5 @@ export function useYouTubePlayer({
     toggleMute,
     setPlaybackRate,
     cyclePlaybackRate,
-    getPlayer,
   };
 }

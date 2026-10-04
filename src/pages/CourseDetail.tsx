@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { courses } from '../data/courses';
 import { Course, Lesson } from '../types';
-import DistractionFreePlayer from '../components/player/DistractionFreePlayer';
-import { isLessonCompleted } from '../hooks/useProgressTracking';
+import YouTubePlayer from '../components/player/YouTubePlayer';
+import { isLessonCompleted } from '../hooks/useProgressSync';
 import { 
   ArrowLeft, CheckCircle2, Circle, Play, Clock, 
   ChevronDown, ChevronRight, Award
@@ -107,7 +107,7 @@ export default function CourseDetail() {
           {/* Player Section */}
           <div className="flex-1 lg:max-w-[calc(100%-380px)]">
             <div className="sticky top-[57px]">
-              <DistractionFreePlayer
+              <YouTubePlayer
                 videoId={activeLesson.youtubeId}
                 courseId={course.id}
                 lessonId={activeLesson.id}
