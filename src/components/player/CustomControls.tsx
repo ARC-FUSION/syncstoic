@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { PlaybackSpeed, PLAYBACK_SPEEDS } from '../../types/player';
 import {
   Play,
   Pause,
@@ -11,7 +10,10 @@ import {
   PictureInPicture2,
 } from 'lucide-react';
 
-interface PlayerControlsProps {
+/**
+ * CustomControls props
+ */
+interface CustomControlsProps {
   isPlaying: boolean;
   isMuted: boolean;
   isFullscreen: boolean;
@@ -19,20 +21,22 @@ interface PlayerControlsProps {
   currentTime: number;
   duration: number;
   volume: number;
-  playbackRate: PlaybackSpeed;
+  playbackRate: number;
   buffered: number;
   visible: boolean;
   onTogglePlay: () => void;
   onSeek: (seconds: number) => void;
   onSetVolume: (level: number) => void;
   onToggleMute: () => void;
-  onSetPlaybackRate: (rate: PlaybackSpeed) => void;
+  onSetPlaybackRate: (rate: number) => void;
   onToggleFullscreen: () => void;
   onToggleFocusMode: () => void;
   onRequestPiP: () => void;
 }
 
-/** Format seconds to M:SS or H:MM:SS */
+/**
+ * Format seconds to M:SS or H:MM:SS
+ */
 function formatTime(seconds: number): string {
   if (!seconds || isNaN(seconds) || seconds < 0) return '0:00';
   const h = Math.floor(seconds / 3600);
@@ -44,7 +48,14 @@ function formatTime(seconds: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
-export default function PlayerControls({
+/**
+ * CustomControls — Custom player control bar
+ *
+ * Provides play/pause, seek, volume, speed, PiP, fullscreen, and focus mode.
+ * Auto-hides after 3s of inactivity when playing.
+ * Positioned at z-30 (above shields).
+ */
+export default function CustomControls({
   isPlaying,
   isMuted,
   isFullscreen,
@@ -63,13 +74,14 @@ export default function PlayerControls({
   onToggleFullscreen,
   onToggleFocusMode,
   onRequestPiP,
-}: PlayerControlsProps) {
+}: CustomControlsProps) {
   const [showSpeedMenu, setShowSpeedMenu] = useState(false);
   const [isSeekHovering, setIsSeekHovering] = useState(false);
   const [seekPreview, setSeekPreview] = useState<number | null>(null);
 
   const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
   const bufferedPercent = buffered * 100;
+  const speeds = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
 
   const handleSeekbarClick = (e: React.MouseEvent<HTMLDivElement>) => {
     e.stopPropagation();
@@ -97,7 +109,7 @@ export default function PlayerControls({
       onClick={(e) => e.stopPropagation()}
       onDoubleClick={(e) => e.stopPropagation()}
     >
-      {/* Gradient background for visibility */}
+      {/* Gradient background */}
       <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent pointer-events-none" />
 
       <div className="relative px-3 sm:px-4 pb-3 sm:pb-4 pt-12">
@@ -156,7 +168,10 @@ export default function PlayerControls({
           <div className="flex items-center gap-1 sm:gap-2">
             {/* Play/Pause */}
             <button
-              onClick={(e) => { e.stopPropagation(); onTogglePlay(); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onTogglePlay();
+              }}
               className="p-2 hover:bg-white/10 rounded-lg transition-colors focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:outline-none"
               aria-label={isPlaying ? 'Pause (Space)' : 'Play (Space)'}
               title={isPlaying ? 'Pause (Space)' : 'Play (Space)'}
@@ -171,7 +186,10 @@ export default function PlayerControls({
             {/* Volume */}
             <div className="flex items-center gap-1 group/vol">
               <button
-                onClick={(e) => { e.stopPropagation(); onToggleMute(); }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleMute();
+                }}
                 className="p-2 hover:bg-white/10 rounded-lg transition-colors focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:outline-none"
                 aria-label={isMuted ? 'Unmute (M)' : 'Mute (M)'}
                 title={isMuted ? 'Unmute (M)' : 'Mute (M)'}
@@ -212,7 +230,10 @@ export default function PlayerControls({
             {/* Speed */}
             <div className="relative">
               <button
-                onClick={(e) => { e.stopPropagation(); setShowSpeedMenu(!showSpeedMenu); }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowSpeedMenu(!showSpeedMenu);
+                }}
                 className={`px-2 py-1 rounded-lg transition-colors text-xs sm:text-sm font-semibold focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:outline-none ${
                   playbackRate !== 1
                     ? 'text-primary-400 bg-primary-500/10 hover:bg-primary-500/20'
@@ -228,7 +249,7 @@ export default function PlayerControls({
                   className="absolute bottom-full right-0 mb-2 bg-surface-light/95 backdrop-blur-xl rounded-xl border border-white/10 overflow-hidden shadow-2xl min-w-[100px]"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  {PLAYBACK_SPEEDS.map((speed) => (
+                  {speeds.map((speed) => (
                     <button
                       key={speed}
                       onClick={(e) => {
@@ -251,7 +272,10 @@ export default function PlayerControls({
 
             {/* PiP */}
             <button
-              onClick={(e) => { e.stopPropagation(); onRequestPiP(); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onRequestPiP();
+              }}
               className="p-2 hover:bg-white/10 rounded-lg transition-colors text-white/70 hover:text-white focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:outline-none hidden sm:block"
               aria-label="Picture-in-Picture"
               title="Picture-in-Picture"
@@ -261,7 +285,10 @@ export default function PlayerControls({
 
             {/* Focus Mode */}
             <button
-              onClick={(e) => { e.stopPropagation(); onToggleFocusMode(); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleFocusMode();
+              }}
               className={`p-2 rounded-lg transition-colors focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:outline-none ${
                 isFocusMode
                   ? 'text-primary-400 bg-primary-500/10 hover:bg-primary-500/20'
@@ -275,16 +302,15 @@ export default function PlayerControls({
 
             {/* Fullscreen */}
             <button
-              onClick={(e) => { e.stopPropagation(); onToggleFullscreen(); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleFullscreen();
+              }}
               className="p-2 hover:bg-white/10 rounded-lg transition-colors text-white/70 hover:text-white focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:outline-none"
               aria-label={isFullscreen ? 'Exit fullscreen (F)' : 'Enter fullscreen (F)'}
               title={isFullscreen ? 'Exit fullscreen (F)' : 'Fullscreen (F)'}
             >
-              {isFullscreen ? (
-                <Minimize className="w-5 h-5" />
-              ) : (
-                <Maximize className="w-5 h-5" />
-              )}
+              {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
             </button>
           </div>
         </div>
