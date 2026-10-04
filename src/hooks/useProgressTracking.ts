@@ -1,146 +1,218 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-
-interface ProgressEntry {
-  lessonId: string;
-  courseId: string;
-  currentTime: number;
-  duration: number;
-  completed: boolean;
-  lastUpdated: number;
-}
-
-interface ProgressStore {
-  [key: string]: ProgressEntry;
-}
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { ProgressEntry, ProgressStore } from '../types/player';
 
 const STORAGE_KEY = 'syncfocus_progress';
-const HEARTBEAT_INTERVAL = 15000; // 15 seconds
+const HEARTBEAT_INTERVAL_MS = 15000; // 15 seconds
+const COMPLETION_THRESHOLD_SEC = 3; // Complete when within 3s of end
+const RESUME_MIN_SEC = 5; // Only resume if past 5 seconds
+const RESUME_MAX_FROM_END_SEC = 10; // Don't resume if within 10s of end
 
-export function useProgressTracking(courseId: string, lessonId: string | null) {
-  const [store, setStore] = useState<ProgressStore>({});
-  const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const lastSavedRef = useRef<number>(0);
+/** Load progress store from localStorage */
+function loadStore(): ProgressStore {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return {};
+    return JSON.parse(raw) as ProgressStore;
+  } catch {
+    return {};
+  }
+}
 
-  // Load from localStorage
+/** Save progress store to localStorage */
+function saveStore(store: ProgressStore): void {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
+  } catch {
+    // Storage full or unavailable — silently fail
+  }
+}
+
+/** Generate a unique key for a course+lesson combo */
+function makeKey(courseId: string, lessonId: string): string {
+  return `${courseId}::${lessonId}`;
+}
+
+/**
+ * Get the resume position for a lesson.
+ * Returns 0 if no valid resume point exists.
+ */
+export function getResumePosition(courseId: string, lessonId: string): number {
+  const store = loadStore();
+  const key = makeKey(courseId, lessonId);
+  const entry = store[key];
+
+  if (!entry) return 0;
+  if (entry.isCompleted) return 0;
+  if (entry.currentTimeSec < RESUME_MIN_SEC) return 0;
+  if (entry.durationSec > 0 && entry.currentTimeSec > entry.durationSec - RESUME_MAX_FROM_END_SEC) return 0;
+
+  return entry.currentTimeSec;
+}
+
+/**
+ * Check if a lesson is marked as completed.
+ */
+export function isLessonCompleted(courseId: string, lessonId: string): boolean {
+  const store = loadStore();
+  const key = makeKey(courseId, lessonId);
+  return store[key]?.isCompleted ?? false;
+}
+
+interface UseProgressTrackingOptions {
+  courseId: string;
+  lessonId: string;
+  enabled: boolean;
+}
+
+interface UseProgressTrackingReturn {
+  /** Current saved progress entry (if any) */
+  entry: ProgressEntry | null;
+  /** Whether the lesson is completed */
+  isCompleted: boolean;
+  /** Whether tracking is active */
+  isActive: boolean;
+  /** Manually save current progress */
+  save: () => void;
+  /** Mark lesson as completed */
+  markCompleted: () => void;
+  /** Clear progress for this lesson */
+  clearProgress: () => void;
+}
+
+export function useProgressTracking(
+  currentTime: number,
+  duration: number,
+  { courseId, lessonId, enabled }: UseProgressTrackingOptions
+): UseProgressTrackingReturn {
+  const [entry, setEntry] = useState<ProgressEntry | null>(null);
+  const lastSaveTimeRef = useRef<number>(0);
+  const lastSavedTimeRef = useRef<number>(0);
+
+  // Load initial entry
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        setStore(JSON.parse(saved));
-      }
-    } catch (e) {
-      console.error('Failed to load progress:', e);
-    }
-  }, []);
+    const store = loadStore();
+    const key = makeKey(courseId, lessonId);
+    setEntry(store[key] ?? null);
+  }, [courseId, lessonId]);
 
-  // Save to localStorage
-  const saveToStorage = useCallback((data: ProgressStore) => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-    } catch (e) {
-      console.error('Failed to save progress:', e);
-    }
-  }, []);
+  // Heartbeat: save progress every 15 seconds
+  useEffect(() => {
+    if (!enabled || !lessonId || duration <= 0) return;
 
-  // Update progress
-  const updateProgress = useCallback((currentTime: number, duration: number) => {
-    if (!lessonId) return;
+    const interval = setInterval(() => {
+      const now = Date.now();
+      // Only save if time has actually changed
+      if (Math.abs(currentTime - lastSavedTimeRef.current) < 0.5) return;
 
-    const now = Date.now();
-    const completed = duration > 0 && currentTime >= duration * 0.95;
-
-    setStore(prev => {
-      const key = `${courseId}:${lessonId}`;
-      const updated = {
-        ...prev,
-        [key]: {
-          lessonId,
-          courseId,
-          currentTime,
-          duration,
-          completed,
-          lastUpdated: now,
-        }
+      const isCompleted = currentTime >= duration - COMPLETION_THRESHOLD_SEC;
+      const newEntry: ProgressEntry = {
+        lessonId,
+        courseId,
+        currentTimeSec: currentTime,
+        durationSec: duration,
+        isCompleted,
+        lastUpdated: now,
       };
-      
-      // Save every heartbeat interval
-      if (now - lastSavedRef.current >= HEARTBEAT_INTERVAL || completed) {
-        saveToStorage(updated);
-        lastSavedRef.current = now;
-      }
-      
-      return updated;
-    });
-  }, [courseId, lessonId, saveToStorage]);
 
-  // Start heartbeat
-  const startHeartbeat = useCallback(() => {
-    if (heartbeatRef.current) return;
-    heartbeatRef.current = setInterval(() => {
-      // Force save on heartbeat
-      setStore(prev => {
-        saveToStorage(prev);
-        lastSavedRef.current = Date.now();
-        return prev;
-      });
-    }, HEARTBEAT_INTERVAL);
-  }, [saveToStorage]);
+      const store = loadStore();
+      const key = makeKey(courseId, lessonId);
+      store[key] = newEntry;
+      saveStore(store);
 
-  // Stop heartbeat
-  const stopHeartbeat = useCallback(() => {
-    if (heartbeatRef.current) {
-      clearInterval(heartbeatRef.current);
-      heartbeatRef.current = null;
-    }
-    // Final save
-    setStore(prev => {
-      saveToStorage(prev);
-      return prev;
-    });
-  }, [saveToStorage]);
+      setEntry(newEntry);
+      lastSavedTimeRef.current = currentTime;
+      lastSaveTimeRef.current = now;
+    }, HEARTBEAT_INTERVAL_MS);
 
-  // Get progress for a specific lesson
-  const getLessonProgress = useCallback((cId: string, lId: string): ProgressEntry | null => {
-    const key = `${cId}:${lId}`;
-    return store[key] || null;
-  }, [store]);
+    return () => clearInterval(interval);
+  }, [enabled, lessonId, courseId, currentTime, duration]);
 
-  // Get course progress
-  const getCourseProgress = useCallback((cId: string): { completed: number; total: number; percent: number } => {
-    const entries = Object.values(store).filter(e => e.courseId === cId);
-    const completed = entries.filter(e => e.completed).length;
-    return { completed, total: entries.length, percent: entries.length > 0 ? Math.round((completed / entries.length) * 100) : 0 };
-  }, [store]);
-
-  // Cleanup
+  // Save on unmount or when video ends
   useEffect(() => {
     return () => {
-      stopHeartbeat();
+      if (!enabled || !lessonId || duration <= 0 || currentTime <= 0) return;
+
+      const isCompleted = currentTime >= duration - COMPLETION_THRESHOLD_SEC;
+      const newEntry: ProgressEntry = {
+        lessonId,
+        courseId,
+        currentTimeSec: currentTime,
+        durationSec: duration,
+        isCompleted,
+        lastUpdated: Date.now(),
+      };
+
+      const store = loadStore();
+      const key = makeKey(courseId, lessonId);
+      store[key] = newEntry;
+      saveStore(store);
     };
-  }, [stopHeartbeat]);
+  }, [enabled, lessonId, courseId, currentTime, duration]);
+
+  const save = useCallback(() => {
+    if (!lessonId || duration <= 0 || currentTime <= 0) return;
+
+    const isCompleted = currentTime >= duration - COMPLETION_THRESHOLD_SEC;
+    const newEntry: ProgressEntry = {
+      lessonId,
+      courseId,
+      currentTimeSec: currentTime,
+      durationSec: duration,
+      isCompleted,
+      lastUpdated: Date.now(),
+    };
+
+    const store = loadStore();
+    const key = makeKey(courseId, lessonId);
+    store[key] = newEntry;
+    saveStore(store);
+    setEntry(newEntry);
+  }, [lessonId, courseId, currentTime, duration]);
+
+  const markCompleted = useCallback(() => {
+    const newEntry: ProgressEntry = {
+      lessonId,
+      courseId,
+      currentTimeSec: duration,
+      durationSec: duration,
+      isCompleted: true,
+      lastUpdated: Date.now(),
+    };
+
+    const store = loadStore();
+    const key = makeKey(courseId, lessonId);
+    store[key] = newEntry;
+    saveStore(store);
+    setEntry(newEntry);
+  }, [lessonId, courseId, duration]);
+
+  const clearProgress = useCallback(() => {
+    const store = loadStore();
+    const key = makeKey(courseId, lessonId);
+    delete store[key];
+    saveStore(store);
+    setEntry(null);
+  }, [courseId, lessonId]);
 
   return {
-    store,
-    updateProgress,
-    startHeartbeat,
-    stopHeartbeat,
-    getLessonProgress,
-    getCourseProgress,
+    entry,
+    isCompleted: entry?.isCompleted ?? false,
+    isActive: enabled,
+    save,
+    markCompleted,
+    clearProgress,
   };
 }
 
-// Helper to get resume position for a lesson
-export function getResumePosition(courseId: string, lessonId: string): number {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (!saved) return 0;
-    const store: ProgressStore = JSON.parse(saved);
-    const key = `${courseId}:${lessonId}`;
-    const entry = store[key];
-    if (!entry || entry.completed) return 0;
-    // Resume from 3 seconds before current position
-    return Math.max(0, entry.currentTime - 3);
-  } catch {
-    return 0;
-  }
+/**
+ * Get overall course progress (percentage of completed lessons).
+ */
+export function getCourseProgress(courseId: string, lessonIds: string[]): number {
+  if (lessonIds.length === 0) return 0;
+  const store = loadStore();
+  const completed = lessonIds.filter(id => {
+    const key = makeKey(courseId, id);
+    return store[key]?.isCompleted ?? false;
+  }).length;
+  return Math.round((completed / lessonIds.length) * 100);
 }

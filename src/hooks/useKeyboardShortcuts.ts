@@ -1,90 +1,147 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
+import { ShortcutHandlers } from '../types/player';
 
-interface KeyboardShortcutHandlers {
-  togglePlay: () => void;
-  seekForward: (seconds?: number) => void;
-  seekBackward: (seconds?: number) => void;
-  volumeUp: () => void;
-  volumeDown: () => void;
-  toggleMute: () => void;
-  toggleFullscreen: () => void;
-  nextSpeed: () => void;
-  skipForward10: () => void;
-  skipBackward10: () => void;
+interface UseKeyboardShortcutsOptions {
+  enabled: boolean;
+  /** Ref to the container element — shortcuts only fire when focused within */
+  containerRef?: React.RefObject<HTMLElement | null>;
 }
 
+/**
+ * Registers keyboard shortcuts for the video player.
+ * All shortcuts follow the spec:
+ *   Space/K → play/pause
+ *   ←/J    → seek back 5s
+ *   →/L    → seek forward 5s
+ *   J (hold shift) → seek back 10s (handled separately)
+ *   L (hold shift) → seek forward 10s (handled separately)
+ *   ↑      → volume up
+ *   ↓      → volume down
+ *   M      → mute toggle
+ *   F      → fullscreen toggle
+ *   Esc    → exit focus mode
+ *   >      → cycle playback speed
+ */
 export function useKeyboardShortcuts(
-  handlers: KeyboardShortcutHandlers,
-  enabled: boolean = true,
-  containerRef?: React.RefObject<HTMLElement>
-) {
+  handlers: ShortcutHandlers,
+  { enabled, containerRef }: UseKeyboardShortcutsOptions
+): void {
+  const handlersRef = useRef(handlers);
+  handlersRef.current = handlers;
+
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (!enabled) return;
-    
-    // Don't trigger if user is typing in an input
-    if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+
+    // Don't intercept when user is typing in an input
+    const target = e.target as HTMLElement;
+    if (
+      target.tagName === 'INPUT' ||
+      target.tagName === 'TEXTAREA' ||
+      target.tagName === 'SELECT' ||
+      target.isContentEditable
+    ) {
       return;
     }
 
-    switch (e.key.toLowerCase()) {
+    const h = handlersRef.current;
+    const key = e.key.toLowerCase();
+    const isShift = e.shiftKey;
+
+    switch (key) {
       case ' ':
+        e.preventDefault();
+        h.togglePlay();
+        break;
+
       case 'k':
         e.preventDefault();
-        handlers.togglePlay();
+        h.togglePlay();
         break;
-      case 'arrowright':
-      case 'l':
-        e.preventDefault();
-        handlers.seekForward(5);
-        break;
+
       case 'arrowleft':
-      case 'j':
         e.preventDefault();
-        handlers.seekBackward(5);
-        break;
-      case 'arrowup':
-        e.preventDefault();
-        handlers.volumeUp();
-        break;
-      case 'arrowdown':
-        e.preventDefault();
-        handlers.volumeDown();
-        break;
-      case 'm':
-        e.preventDefault();
-        handlers.toggleMute();
-        break;
-      case 'f':
-        e.preventDefault();
-        handlers.toggleFullscreen();
-        break;
-      case '>':
-        if (e.shiftKey) {
-          e.preventDefault();
-          handlers.nextSpeed();
+        if (isShift) {
+          h.seekBackward10();
+        } else {
+          h.seekBackward5();
         }
         break;
-      case '0':
+
+      case 'j':
         e.preventDefault();
-        handlers.skipBackward10();
+        if (isShift) {
+          h.seekBackward10();
+        } else {
+          h.seekBackward5();
+        }
         break;
-      case '1':
-      case '2':
-      case '3':
-      case '4':
-      case '5':
-      case '6':
-      case '7':
-      case '8':
-      case '9':
-        // Could seek to percentage - not implementing for now
+
+      case 'arrowright':
+        e.preventDefault();
+        if (isShift) {
+          h.seekForward10();
+        } else {
+          h.seekForward5();
+        }
+        break;
+
+      case 'l':
+        e.preventDefault();
+        if (isShift) {
+          h.seekForward10();
+        } else {
+          h.seekForward5();
+        }
+        break;
+
+      case 'arrowup':
+        e.preventDefault();
+        h.volumeUp();
+        break;
+
+      case 'arrowdown':
+        e.preventDefault();
+        h.volumeDown();
+        break;
+
+      case 'm':
+        e.preventDefault();
+        h.toggleMute();
+        break;
+
+      case 'f':
+        e.preventDefault();
+        h.toggleFullscreen();
+        break;
+
+      case 'escape':
+        e.preventDefault();
+        h.exitFocusMode();
+        break;
+
+      case '>':
+        // Shift+. produces '>'
+        if (isShift) {
+          e.preventDefault();
+          h.cycleSpeed();
+        }
+        break;
+
+      case '.':
+        // Also support Shift+. for speed cycling
+        if (isShift) {
+          e.preventDefault();
+          h.cycleSpeed();
+        }
         break;
     }
-  }, [handlers, enabled]);
+  }, [enabled]);
 
   useEffect(() => {
-    const target = containerRef?.current || document;
+    const target = containerRef?.current ?? document;
     target.addEventListener('keydown', handleKeyDown as EventListener);
-    return () => target.removeEventListener('keydown', handleKeyDown as EventListener);
+    return () => {
+      target.removeEventListener('keydown', handleKeyDown as EventListener);
+    };
   }, [handleKeyDown, containerRef]);
 }

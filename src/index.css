@@ -58,16 +58,14 @@ body {
   border-radius: 3px;
 }
 
-/* YouTube player hide all UI */
-.yt-player-wrapper iframe {
-  pointer-events: none;
+/* Focus ring styles */
+*:focus-visible {
+  outline: none;
+  ring: 2px solid #6366f1;
+  ring-offset: 2px;
 }
 
-.yt-player-wrapper.interactive iframe {
-  pointer-events: auto;
-}
-
-/* Focus mode animations */
+/* Animations */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
@@ -84,7 +82,7 @@ body {
 }
 
 .animate-fade-in {
-  animation: fadeIn 0.4s ease-out forwards;
+  animation: fadeIn 0.3s ease-out forwards;
 }
 
 .animate-slide-up {
@@ -136,4 +134,18 @@ input[type="range"]::-moz-range-thumb {
   border-radius: 50%;
   background: #6366f1;
   border: none;
+}
+
+/* YouTube player hide all UI */
+.yt-player-wrapper iframe {
+  pointer-events: none;
+}
+
+.yt-player-wrapper.interactive iframe {
+  pointer-events: auto;
+}
+
+/* Player z-index layers */
+.z-25 {
+  z-index: 25;
 }
