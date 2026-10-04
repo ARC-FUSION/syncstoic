@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, BookOpen, User, Zap } from 'lucide-react';
+import { LayoutDashboard, BookOpen, User, Zap, StickyNote } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 
 export default function Navigation() {
@@ -19,6 +19,7 @@ export default function Navigation() {
   const navItems = [
     { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', protected: true },
     { path: '/courses', icon: BookOpen, label: 'Catalog', protected: false },
+    { path: '/notes', icon: StickyNote, label: 'Notes', protected: true },
   ];
 
   return (

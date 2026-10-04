@@ -49,6 +49,7 @@ export default function Dashboard() {
     streak: 0,
     lessonsCompleted: 0,
     coursesInProgress: 0,
+    focusScore: 100,
   };
 
   // Calculate total minutes watched
@@ -80,6 +81,17 @@ export default function Dashboard() {
     return entryDate === today;
   });
   stats.streak = watchedToday ? 1 : 0;
+
+  // Load focus score from localStorage
+  const storedFocusStats = localStorage.getItem('syncfocus_focus_stats');
+  if (storedFocusStats) {
+    try {
+      const focusData = JSON.parse(storedFocusStats);
+      stats.focusScore = focusData.focusScore || 100;
+    } catch (e) {
+      // Ignore parse errors
+    }
+  }
 
   // Find last watched lesson for "Continue Watching"
   const lastWatched = Object.values(progress).sort((a, b) => b.timestamp - a.timestamp)[0];
@@ -169,6 +181,19 @@ export default function Dashboard() {
             </div>
             <div className="text-2xl font-bold text-white mb-1">{stats.coursesInProgress}</div>
             <div className="text-sm text-white/60">Courses in progress</div>
+          </div>
+
+          <div className="bg-surface-light/50 backdrop-blur-sm border border-white/10 rounded-2xl p-6">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 bg-purple-500/10 rounded-lg flex items-center justify-center">
+                <svg className="w-5 h-5 text-purple-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M12 6v6l4 2" />
+                </svg>
+              </div>
+            </div>
+            <div className="text-2xl font-bold text-white mb-1">{Math.round(stats.focusScore)}%</div>
+            <div className="text-sm text-white/60">Focus score</div>
           </div>
         </div>
 
