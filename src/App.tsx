@@ -11,6 +11,12 @@ import Profile from './pages/Profile';
 import Settings from './pages/Settings';
 import Notes from './pages/Notes';
 import PlayerDemo from './pages/PlayerDemo';
+import InstructorLayout from './pages/InstructorLayout';
+import InstructorCourses from './pages/instructor/Courses';
+import CreateCourse from './pages/instructor/CreateCourse';
+import CourseEditor from './pages/instructor/CourseEditor';
+import Analytics from './pages/instructor/Analytics';
+import Students from './pages/instructor/Students';
 
 function App() {
   return (
@@ -71,6 +77,23 @@ function App() {
             </ProtectedRoute>
           }
         />
+
+        {/* Instructor Routes */}
+        <Route
+          path="/instructor"
+          element={
+            <ProtectedRoute>
+              <InstructorLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<InstructorCourses />} />
+          <Route path="courses" element={<InstructorCourses />} />
+          <Route path="courses/new" element={<CreateCourse />} />
+          <Route path="courses/:id" element={<CourseEditor />} />
+          <Route path="analytics" element={<Analytics />} />
+          <Route path="students" element={<Students />} />
+        </Route>
       </Routes>
     </HashRouter>
   );
