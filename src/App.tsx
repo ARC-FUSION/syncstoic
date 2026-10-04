@@ -9,6 +9,7 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
 import Settings from './pages/Settings';
+import Notes from './pages/Notes';
 import PlayerDemo from './pages/PlayerDemo';
 
 function App() {
@@ -58,6 +59,15 @@ function App() {
             <ProtectedRoute>
               <Navigation />
               <Settings />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/notes"
+          element={
+            <ProtectedRoute>
+              <Navigation />
+              <Notes />
             </ProtectedRoute>
           }
         />

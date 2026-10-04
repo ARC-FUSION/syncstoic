@@ -2,10 +2,14 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { useYouTubePlayer, PlayerStatus } from '../../hooks/useYouTubePlayer';
 import { useProgressSync, getResumePosition } from '../../hooks/useProgressSync';
 import { useKeyboardShortcuts, ShortcutHandlers } from '../../hooks/useKeyboardShortcuts';
+import { useFocusTracking } from '../../hooks/useFocusTracking';
+import { useSettingsStore } from '../../lib/stores/settingsStore';
 import DistractionShield from './DistractionShield';
 import CustomControls from './CustomControls';
 import FocusModeToggle from './FocusModeToggle';
-import { Loader2, AlertCircle, RefreshCw } from 'lucide-react';
+import NotesDrawer from './NotesDrawer';
+import PomodoroTimer from './PomodoroTimer';
+import { Loader2, AlertCircle, RefreshCw, StickyNote } from 'lucide-react';
 
 /**
  * YouTubePlayer props
@@ -39,6 +43,10 @@ export default function YouTubePlayer({ videoId, courseId, lessonId, title }: Yo
   const [showControls, setShowControls] = useState(true);
   const [actionFeedback, setActionFeedback] = useState<string | null>(null);
   const [retryKey, setRetryKey] = useState(0);
+  const [showNotes, setShowNotes] = useState(false);
+  const [showPomodoro, setShowPomodoro] = useState(false);
+
+  const { focus } = useSettingsStore();
 
   // Calculate resume position
   const resumePosition = getResumePosition(courseId, lessonId);
@@ -68,6 +76,30 @@ export default function YouTubePlayer({ videoId, courseId, lessonId, title }: Yo
     setActionFeedback(message);
     setTimeout(() => setActionFeedback(null), 1200);
   }, []);
+
+  // Focus tracking hook
+  const { stats: focusStats } = useFocusTracking({
+    isPlaying: player.isPlaying,
+    onTabHidden: () => {
+      if (focus.autoPauseOnTabSwitch && player.isPlaying) {
+        player.pause();
+        showFeedback('⏸ Paused (tab switched)');
+      }
+    },
+    onTabVisible: () => {
+      // Optional: could auto-resume here
+    },
+  });
+
+  // Pomodoro callbacks
+  const handlePomodoroBreakStart = useCallback(() => {
+    player.pause();
+    showFeedback('☕ Break time!');
+  }, [player, showFeedback]);
+
+  const handlePomodoroBreakEnd = useCallback(() => {
+    showFeedback('🔥 Back to work!');
+  }, [showFeedback]);
 
   // Auto-hide controls
   const resetControlsTimeout = useCallback(() => {
@@ -327,6 +359,57 @@ export default function YouTubePlayer({ videoId, courseId, lessonId, title }: Yo
 
       {/* Focus mode toggle + hint */}
       <FocusModeToggle isFocusMode={isFocusMode} onToggle={toggleFocusMode} />
+
+      {/* Pomodoro Timer */}
+      {showPomodoro && (
+        <PomodoroTimer
+          onBreakStart={handlePomodoroBreakStart}
+          onBreakEnd={handlePomodoroBreakEnd}
+        />
+      )}
+
+      {/* Notes Drawer */}
+      <NotesDrawer
+        isOpen={showNotes}
+        onClose={() => setShowNotes(false)}
+        lessonId={lessonId}
+        courseId={courseId}
+        currentTime={player.currentTime}
+        onSeekTo={player.seekTo}
+      />
+
+      {/* Toggle buttons for notes and pomodoro */}
+      {(showControls || !player.isPlaying) && (
+        <div className="absolute top-4 left-4 z-40 flex gap-2">
+          <button
+            onClick={() => setShowNotes(!showNotes)}
+            className={`p-2 rounded-lg backdrop-blur-sm transition-colors ${
+              showNotes
+                ? 'bg-primary-600 text-white'
+                : 'bg-black/60 text-white/60 hover:text-white hover:bg-black/80'
+            }`}
+            aria-label="Toggle notes"
+            title="Notes"
+          >
+            <StickyNote className="w-5 h-5" />
+          </button>
+          <button
+            onClick={() => setShowPomodoro(!showPomodoro)}
+            className={`p-2 rounded-lg backdrop-blur-sm transition-colors ${
+              showPomodoro
+                ? 'bg-primary-600 text-white'
+                : 'bg-black/60 text-white/60 hover:text-white hover:bg-black/80'
+            }`}
+            aria-label="Toggle pomodoro timer"
+            title="Pomodoro Timer"
+          >
+            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="10" />
+              <polyline points="12 6 12 12 16 14" />
+            </svg>
+          </button>
+        </div>
+      )}
 
       {/* Title overlay (top) */}
       {(showControls || !player.isPlaying) && title && (
