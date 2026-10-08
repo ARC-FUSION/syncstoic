@@ -2,8 +2,8 @@
  * Core type definitions for SyncFocus LMS
  */
 
-export type UserRole = 'student' | 'instructor' | 'admin';
-export type Difficulty = 'beginner' | 'intermediate' | 'advanced';
+export type UserRole = 'STUDENT' | 'INSTRUCTOR' | 'ADMIN';
+export type Difficulty = 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
 export type SortOption = 'newest' | 'popular' | 'duration';
 
 export interface User {
@@ -12,6 +12,23 @@ export interface User {
   email: string;
   avatarUrl: string;
   role: UserRole;
+}
+
+export interface Lesson {
+  id: string;
+  youtubeVideoId: string;
+  title: string;
+  durationSec: number;
+  order: number;
+  isPreview: boolean;
+  isCompleted: boolean;
+}
+
+export interface Module {
+  id: string;
+  title: string;
+  order: number;
+  lessons: Lesson[];
 }
 
 export interface Course {
@@ -25,26 +42,11 @@ export interface Course {
   tags: string[];
   modules: Module[];
   lessonCount: number;
-  totalDuration: number;
+  totalDurationSec: number;
+  enrolledCount: number;
+  rating: number;
+  /** ISO timestamp — used for the "Newest" sort. */
   createdAt: string;
-  enrollCount: number;
-}
-
-export interface Module {
-  id: string;
-  title: string;
-  order: number;
-  lessons: Lesson[];
-}
-
-export interface Lesson {
-  id: string;
-  youtubeVideoId: string;
-  title: string;
-  durationSec: number;
-  order: number;
-  isPreview: boolean;
-  isCompleted: boolean;
 }
 
 export interface Enrollment {

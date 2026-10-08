@@ -5,7 +5,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { Toaster } from './components/ui/Toaster';
 import { MobileBottomNav } from './components/MobileBottomNav';
-import { GridSkeleton, ListSkeleton } from './components/ui/Skeleton';
+import { GridSkeleton } from './components/ui/loaders';
 
 // Lazy load pages for code splitting
 const Landing = lazy(() => import('./pages/Landing'));

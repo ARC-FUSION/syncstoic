@@ -227,6 +227,12 @@ export const useInstructorStore = create<InstructorState>()(
     }),
     {
       name: 'syncfocus-instructor',
+      version: 1,
+      migrate: () =>
+        ({
+          courses: [],
+          students: {},
+        }) as unknown as InstructorState,
     }
   )
 );
