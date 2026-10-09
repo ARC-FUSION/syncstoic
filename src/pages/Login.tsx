@@ -3,6 +3,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Loader2, Zap } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import { useAuthStore } from '../stores/authStore';
 import { loginSchema, type LoginFormData } from '../lib/validations/auth';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -63,8 +64,9 @@ export default function Login() {
 
   const onSubmit = async (data: LoginFormData) => {
     try {
-      const user = await login(data.email, data.password);
-      toast.success(`Welcome back, ${user.name}!`);
+      await login(data.email, data.password);
+      const user = useAuthStore.getState().user;
+      toast.success(`Welcome back, ${user?.name ?? 'friend'}!`);
       navigate(redirectTo, { replace: true });
     } catch {
       toast.error('Sign in failed. Please try again.');
