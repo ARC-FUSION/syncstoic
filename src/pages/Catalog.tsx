@@ -120,29 +120,31 @@ export default function Catalog() {
         <div className="space-y-4 mb-8">
           {/* Search */}
           <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" strokeWidth={2} />
             <input
               type="text"
               placeholder="Search courses, instructors, or tags..."
               value={query}
               onChange={(e) => updateFilter('q', e.target.value)}
-              className="w-full bg-surface-light border border-white/10 rounded-xl pl-12 pr-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-primary-500/50 focus:ring-1 focus:ring-primary-500/20 transition-all"
+              className="w-full bg-surface-light border border-white/10 rounded-xl pl-12 pr-4 py-3 sm:py-3.5 text-white placeholder-white/30 focus:outline-none focus:border-primary-500/50 focus:ring-2 focus:ring-primary-500/20 transition-all min-h-[48px]"
               aria-label="Search courses"
             />
           </div>
 
           {/* Filter Row */}
-          <div className="flex flex-wrap gap-3 items-center">
+          <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3 sm:gap-4 items-start sm:items-center">
             {/* Difficulty Filter */}
-            <div className="flex items-center gap-2">
-              <Filter className="w-4 h-4 text-white/40" />
-              <span className="text-white/60 text-sm">Difficulty:</span>
-              <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
+              <div className="flex items-center gap-2">
+                <Filter className="w-5 h-5 text-white/40" strokeWidth={2} />
+                <span className="text-white/60 text-sm font-medium">Difficulty:</span>
+              </div>
+              <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => updateFilter('difficulty', '')}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-all min-h-[40px] ${
                     !difficulty
-                      ? 'bg-primary-600 text-white'
+                      ? 'bg-primary-600 text-white shadow-lg shadow-primary-500/20'
                       : 'bg-surface-light text-white/60 hover:text-white hover:bg-surface-lighter border border-white/5'
                   }`}
                   aria-label="Show all difficulties"
@@ -153,9 +155,9 @@ export default function Catalog() {
                   <button
                     key={diff}
                     onClick={() => updateFilter('difficulty', diff)}
-                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all capitalize ${
+                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-all capitalize min-h-[40px] ${
                       difficulty === diff
-                        ? 'bg-primary-600 text-white'
+                        ? 'bg-primary-600 text-white shadow-lg shadow-primary-500/20'
                         : 'bg-surface-light text-white/60 hover:text-white hover:bg-surface-lighter border border-white/5'
                     }`}
                     aria-label={`Filter by ${diff} difficulty`}
@@ -167,12 +169,12 @@ export default function Catalog() {
             </div>
 
             {/* Tag Filter */}
-            <div className="flex items-center gap-2">
-              <span className="text-white/60 text-sm">Tag:</span>
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <span className="text-white/60 text-sm font-medium">Tag:</span>
               <select
                 value={tag}
                 onChange={(e) => updateFilter('tag', e.target.value)}
-                className="bg-surface-light border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-primary-500/50 transition-all"
+                className="flex-1 sm:flex-none bg-surface-light border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary-500/50 focus:ring-2 focus:ring-primary-500/20 transition-all min-h-[40px]"
                 aria-label="Filter by tag"
               >
                 <option value="">All Tags</option>
@@ -185,18 +187,20 @@ export default function Catalog() {
             </div>
 
             {/* Sort */}
-            <div className="ml-auto relative">
+            <div className="sm:ml-auto relative w-full sm:w-auto">
               <button
                 onClick={() => setShowSortDropdown(!showSortDropdown)}
-                className="flex items-center gap-2 bg-surface-light border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white hover:bg-surface-lighter transition-all"
+                className="flex items-center justify-between sm:justify-start gap-2 w-full sm:w-auto bg-surface-light border border-white/10 rounded-lg px-3 py-2 text-sm text-white hover:bg-surface-lighter transition-all min-h-[40px]"
                 aria-label="Sort courses"
                 aria-expanded={showSortDropdown}
               >
-                <span className="text-white/60">Sort:</span>
-                <span className="font-medium">
-                  {sortOptions.find((o) => o.value === sort)?.label}
-                </span>
-                <ChevronDown className="w-4 h-4" />
+                <div className="flex items-center gap-2">
+                  <span className="text-white/60">Sort:</span>
+                  <span className="font-medium">
+                    {sortOptions.find((o) => o.value === sort)?.label}
+                  </span>
+                </div>
+                <ChevronDown className={`w-5 h-5 transition-transform ${showSortDropdown ? 'rotate-180' : ''}`} strokeWidth={2} />
               </button>
               {showSortDropdown && (
                 <div className="absolute right-0 top-full mt-2 bg-surface-light border border-white/10 rounded-lg overflow-hidden shadow-xl z-10 min-w-[150px]">
@@ -238,7 +242,7 @@ export default function Catalog() {
               <Link
                 key={course.id}
                 to={`/course/${course.slug}`}
-                className="group bg-surface-light border border-white/5 rounded-2xl overflow-hidden hover:border-primary-500/30 transition-all duration-300 hover:shadow-lg hover:shadow-primary-500/5"
+                className="group bg-surface-light border border-white/5 rounded-xl sm:rounded-2xl overflow-hidden hover:border-primary-500/30 transition-all duration-300 hover:shadow-lg hover:shadow-primary-500/10"
               >
                 {/* Thumbnail */}
                 <div className="relative aspect-video overflow-hidden">
@@ -246,6 +250,7 @@ export default function Catalog() {
                     src={getYouTubeThumbnail(course.modules[0]?.lessons[0]?.youtubeVideoId || 'dQw4w9WgXcQ')}
                     alt={course.title}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    loading="lazy"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                   
@@ -262,28 +267,28 @@ export default function Catalog() {
 
                   {/* Duration */}
                   <div className="absolute bottom-3 right-3 bg-black/60 backdrop-blur-sm text-white/90 text-xs px-2 py-1 rounded-lg flex items-center gap-1">
-                    <Clock className="w-3 h-3" />
+                    <Clock className="w-3.5 h-3.5" strokeWidth={2} />
                     {formatDuration(course.totalDuration)}
                   </div>
                 </div>
 
                 {/* Content */}
-                <div className="p-5">
-                  <h3 className="text-white font-semibold line-clamp-2 group-hover:text-primary-300 transition-colors mb-2">
+                <div className="p-4 sm:p-5">
+                  <h3 className="text-white font-semibold text-sm sm:text-base line-clamp-2 group-hover:text-primary-300 transition-colors mb-2">
                     {course.title}
                   </h3>
-                  <p className="text-white/40 text-sm mb-3">{course.instructor}</p>
+                  <p className="text-white/40 text-xs sm:text-sm mb-3">{course.instructor}</p>
                   <p className="text-white/30 text-xs line-clamp-2 mb-4">{course.description}</p>
 
                   {/* Stats */}
                   <div className="flex items-center justify-between pt-3 border-t border-white/5">
                     <div className="flex items-center gap-3 text-xs text-white/40">
                       <span className="flex items-center gap-1">
-                        <BookOpen className="w-3.5 h-3.5" />
+                        <BookOpen className="w-4 h-4" strokeWidth={2} />
                         {course.lessonCount} lessons
                       </span>
                       <span className="flex items-center gap-1">
-                        <Users className="w-3.5 h-3.5" />
+                        <Users className="w-4 h-4" strokeWidth={2} />
                         {formatNumber(course.enrollCount)}
                       </span>
                     </div>
