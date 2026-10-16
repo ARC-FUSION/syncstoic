@@ -5,7 +5,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { Toaster } from './components/ui/Toaster';
 import { MobileBottomNav } from './components/MobileBottomNav';
-import { GridSkeleton, ListSkeleton } from './components/ui/Skeleton';
+import { GridSkeleton } from './components/ui/loaders';
 
 // Lazy load pages for code splitting
 const Landing = lazy(() => import('./pages/Landing'));
@@ -15,6 +15,7 @@ const Login = lazy(() => import('./pages/Login'));
 const Register = lazy(() => import('./pages/Register'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Profile = lazy(() => import('./pages/Profile'));
+const Learn = lazy(() => import('./pages/Learn'));
 const Settings = lazy(() => import('./pages/Settings'));
 const Notes = lazy(() => import('./pages/Notes'));
 const PlayerDemo = lazy(() => import('./pages/PlayerDemo'));
@@ -88,6 +89,14 @@ function App() {
                 <ProtectedRoute>
                   <Navigation />
                   <Notes />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/learn/:courseSlug/:lessonId"
+              element={
+                <ProtectedRoute>
+                  <Learn />
                 </ProtectedRoute>
               }
             />
