@@ -13,7 +13,8 @@ export default function Navigation() {
     location.pathname === '/' ||
     location.pathname === '/login' ||
     location.pathname === '/register' ||
-    location.pathname.startsWith('/course/')
+    location.pathname.startsWith('/course/') ||
+    location.pathname.startsWith('/learn/')
   ) {
     return null;
   }
@@ -23,6 +24,12 @@ export default function Navigation() {
     { path: '/courses', icon: BookOpen, label: 'Catalog', protected: false },
     { path: '/notes', icon: StickyNote, label: 'Notes', protected: true },
   ];
+
+  const handleLogout = () => {
+    logout();
+    toast.success('You have been logged out.');
+    navigate('/login', { replace: true });
+  };
 
   return (
     <>

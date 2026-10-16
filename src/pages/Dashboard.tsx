@@ -1,6 +1,19 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
+import {
+  BookOpen,
+  Clock,
+  Flame,
+  Play,
+  TrendingUp,
+  Trophy,
+  type LucideIcon,
+} from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import { useEnrollment } from '../hooks/useEnrollment';
+import { useStats } from '../hooks/useStats';
 import { seedCourses } from '../lib/data/seed';
+import { latestEntry, readProgress, type ProgressStore } from '../lib/progress';
 import { formatDuration, getYouTubeThumbnail } from '../lib/utils';
 import { Play, Clock, BookOpen, Trophy, Flame, TrendingUp, Target, ArrowRight } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -119,6 +132,17 @@ export default function Dashboard() {
     );
   }
 
+function StatCard({
+  icon: Icon,
+  value,
+  label,
+  accent,
+}: {
+  icon: LucideIcon;
+  value: string | number;
+  label: string;
+  accent: string;
+}) {
   return (
     <div className="min-h-screen bg-surface pb-20 md:pb-0">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">

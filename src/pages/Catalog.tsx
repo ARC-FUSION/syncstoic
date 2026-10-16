@@ -1,116 +1,107 @@
-import { useState, useMemo, useEffect } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { seedCourses } from '../lib/data/seed';
-import { Difficulty, SortOption } from '../lib/types';
-import { formatDuration, formatNumber, getYouTubeThumbnail } from '../lib/utils';
-import { Search, Filter, Clock, BookOpen, Users, ChevronDown } from 'lucide-react';
-import { GridSkeleton } from '../components/ui/Skeleton';
-import { PageTransition, StaggerContainer, StaggerItem } from '../components/ui/PageTransition';
+import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { Search, SlidersHorizontal, ChevronDown, Check, X } from 'lucide-react';
+import { getAllTags, seedCourses } from '../lib/data/seed';
+import type { Difficulty, SortOption } from '../lib/types';
+import { Input } from '../components/ui/input';
+import { Button } from '../components/ui/button';
+import { Card, CardContent } from '../components/ui/card';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '../components/ui/dropdown-menu';
+import { GridSkeleton } from '../components/ui/loaders';
+import { PageTransition } from '../components/ui/PageTransition';
+import CourseCard, { difficultyLabel } from '../components/course/CourseCard';
 
-const difficulties: Difficulty[] = ['beginner', 'intermediate', 'advanced'];
+const difficulties: Difficulty[] = ['BEGINNER', 'INTERMEDIATE', 'ADVANCED'];
 const sortOptions: { value: SortOption; label: string }[] = [
   { value: 'newest', label: 'Newest' },
-  { value: 'popular', label: 'Most Popular' },
+  { value: 'popular', label: 'Popular' },
   { value: 'duration', label: 'Duration' },
 ];
 
+function isDifficulty(value: string | null): value is Difficulty {
+  return value === 'BEGINNER' || value === 'INTERMEDIATE' || value === 'ADVANCED';
+}
+
 export default function Catalog() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [showSortDropdown, setShowSortDropdown] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 500);
+    const timer = setTimeout(() => setIsLoading(false), 450);
     return () => clearTimeout(timer);
   }, []);
 
-  // Read filters from URL
-  const query = searchParams.get('q') || '';
-  const difficulty = (searchParams.get('difficulty') as Difficulty) || '';
-  const tag = searchParams.get('tag') || '';
+  const query = searchParams.get('q') ?? '';
+  const difficultyParam = searchParams.get('difficulty');
+  const difficulty = isDifficulty(difficultyParam) ? difficultyParam : null;
+  const tag = searchParams.get('tag') ?? '';
   const sort = (searchParams.get('sort') as SortOption) || 'newest';
 
-  // Update URL params
+  const allTags = useMemo(() => getAllTags(), []);
+
   const updateFilter = (key: string, value: string) => {
-    const newParams = new URLSearchParams(searchParams);
-    if (value) {
-      newParams.set(key, value);
-    } else {
-      newParams.delete(key);
-    }
-    setSearchParams(newParams);
+    const next = new URLSearchParams(searchParams);
+    if (value) next.set(key, value);
+    else next.delete(key);
+    setSearchParams(next);
   };
 
-  // Get all unique tags
-  const allTags = useMemo(() => {
-    const tags = new Set<string>();
-    seedCourses.forEach(course => course.tags.forEach(tag => tags.add(tag)));
-    return Array.from(tags).sort();
-  }, []);
+  const clearFilters = () => setSearchParams(new URLSearchParams());
 
-  // Filter and sort courses
   const filteredCourses = useMemo(() => {
     let result = [...seedCourses];
 
-    // Search filter
-    if (query) {
-      const lowerQuery = query.toLowerCase();
+    if (query.trim()) {
+      const q = query.toLowerCase();
       result = result.filter(
-        course =>
-          course.title.toLowerCase().includes(lowerQuery) ||
-          course.description.toLowerCase().includes(lowerQuery) ||
-          course.instructor.toLowerCase().includes(lowerQuery) ||
-          course.tags.some(t => t.toLowerCase().includes(lowerQuery))
+        (course) =>
+          course.title.toLowerCase().includes(q) ||
+          course.instructor.toLowerCase().includes(q) ||
+          course.tags.some((t) => t.toLowerCase().includes(q))
       );
     }
 
-    // Difficulty filter
     if (difficulty) {
-      result = result.filter(course => course.difficulty === difficulty);
+      result = result.filter((course) => course.difficulty === difficulty);
     }
 
-    // Tag filter
     if (tag) {
-      result = result.filter(course => course.tags.includes(tag));
+      result = result.filter((course) => course.tags.includes(tag));
     }
 
-    // Sort
     switch (sort) {
-      case 'newest':
-        result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        break;
       case 'popular':
-        result.sort((a, b) => b.enrollCount - a.enrollCount);
+        result.sort((a, b) => b.enrolledCount - a.enrolledCount);
         break;
       case 'duration':
-        result.sort((a, b) => b.totalDuration - a.totalDuration);
+        result.sort((a, b) => b.totalDurationSec - a.totalDurationSec);
         break;
+      case 'newest':
+      default:
+        result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     }
 
     return result;
   }, [query, difficulty, tag, sort]);
 
-  const getDifficultyColor = (diff: Difficulty) => {
-    switch (diff) {
-      case 'beginner':
-        return 'bg-green-500/10 text-green-400 border-green-500/20';
-      case 'intermediate':
-        return 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20';
-      case 'advanced':
-        return 'bg-red-500/10 text-red-400 border-red-500/20';
-    }
-  };
+  const hasActiveFilters = Boolean(query || difficulty || tag);
 
   return (
     <PageTransition>
       <div className="min-h-screen bg-surface pb-20 md:pb-0">
-        {/* Header */}
         <div className="border-b border-white/5 bg-surface-light/50 backdrop-blur-sm">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
-            <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Course Catalog</h1>
-            <p className="text-white/60 text-sm sm:text-base">
-              Discover structured courses from YouTube playlists
+          <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
+            <h1 className="text-2xl font-bold text-white sm:text-3xl">Course Catalog</h1>
+            <p className="mt-1 text-sm text-white/60 sm:text-base">
+              Structured courses built from the best YouTube tutorials
             </p>
           </div>
         </div>
@@ -149,7 +140,7 @@ export default function Catalog() {
                   }`}
                   aria-label="Show all difficulties"
                 >
-                  All
+                  <X className="h-4 w-4" />
                 </button>
                 {difficulties.map((diff) => (
                   <button
@@ -221,8 +212,6 @@ export default function Catalog() {
                 </div>
               )}
             </div>
-          </div>
-        </div>
 
         {/* Results Count */}
         <div className="mb-4">
@@ -261,9 +250,13 @@ export default function Catalog() {
                         course.difficulty
                       )}`}
                     >
-                      {course.difficulty}
-                    </span>
-                  </div>
+                      {option.label}
+                    </DropdownMenuRadioItem>
+                  ))}
+                </DropdownMenuRadioGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
 
                   {/* Duration */}
                   <div className="absolute bottom-3 right-3 bg-black/60 backdrop-blur-sm text-white/90 text-xs px-2 py-1 rounded-lg flex items-center gap-1">
@@ -294,42 +287,31 @@ export default function Catalog() {
                     </div>
                   </div>
 
-                  {/* Tags */}
-                  <div className="flex flex-wrap gap-1.5 mt-3">
-                    {course.tags.slice(0, 3).map((tag) => (
-                      <span
-                        key={tag}
-                        className="px-2 py-0.5 bg-white/5 text-white/40 text-xs rounded-md"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </Link>
-                </StaggerItem>
+          {isLoading ? (
+            <GridSkeleton count={6} />
+          ) : filteredCourses.length > 0 ? (
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {filteredCourses.map((course) => (
+                <CourseCard key={course.id} course={course} />
               ))}
             </div>
-          </StaggerContainer>
-        ) : (
-          /* Empty State */
-          <div className="text-center py-16">
-            <div className="w-20 h-20 mx-auto mb-4 bg-surface-light rounded-full flex items-center justify-center">
-              <Search className="w-10 h-10 text-white/20" />
-            </div>
-            <h3 className="text-white font-semibold text-lg mb-2">No courses found</h3>
-            <p className="text-white/40 text-sm mb-6">
-              Try adjusting your filters or search terms
-            </p>
-            <button
-              onClick={() => setSearchParams(new URLSearchParams())}
-              className="px-6 py-2.5 bg-primary-600 hover:bg-primary-500 text-white font-medium rounded-xl transition-all"
-            >
-              Clear Filters
-            </button>
-          </div>
-        )}
-      </div>
+          ) : (
+            <Card className="border-white/5 bg-surface-light text-white ring-white/5">
+              <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
+                <div className="flex h-20 w-20 items-center justify-center rounded-full bg-white/5">
+                  <Search className="h-9 w-9 text-white/20" />
+                </div>
+                <h3 className="text-lg font-semibold text-white">No courses found</h3>
+                <p className="max-w-sm text-sm text-white/40">
+                  Try adjusting your search or filters to find what you're looking for.
+                </p>
+                <Button onClick={clearFilters} className="mt-2">
+                  Clear filters
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+        </div>
       </div>
     </PageTransition>
   );

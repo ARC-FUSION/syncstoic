@@ -10,7 +10,7 @@ export default function CreateCourse() {
   
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [difficulty, setDifficulty] = useState<Difficulty>('beginner');
+  const [difficulty, setDifficulty] = useState<Difficulty>('BEGINNER');
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
 
@@ -45,8 +45,9 @@ export default function CreateCourse() {
       tags,
       modules: [],
       lessonCount: 0,
-      totalDuration: 0,
-      enrollCount: 0,
+      totalDurationSec: 0,
+      enrolledCount: 0,
+      rating: 0,
       status: 'draft',
       instructorId: 'current-user',
     });
@@ -109,9 +110,9 @@ export default function CreateCourse() {
                 onChange={(e) => setDifficulty(e.target.value as Difficulty)}
                 className="w-full px-4 py-2 bg-surface border border-white/10 rounded-lg text-white focus:outline-none focus:border-primary-500"
               >
-                <option value="beginner">Beginner</option>
-                <option value="intermediate">Intermediate</option>
-                <option value="advanced">Advanced</option>
+                <option value="BEGINNER">Beginner</option>
+                <option value="INTERMEDIATE">Intermediate</option>
+                <option value="ADVANCED">Advanced</option>
               </select>
             </div>
 

@@ -5,7 +5,7 @@ export default function Analytics() {
   const { courses, students } = useInstructorStore();
 
   // Calculate overall stats
-  const totalEnrollments = courses.reduce((sum, course) => sum + course.enrollCount, 0);
+  const totalEnrollments = courses.reduce((sum, course) => sum + course.enrolledCount, 0);
   const totalLessons = courses.reduce(
     (sum, course) => sum + course.modules.reduce((modSum, mod) => modSum + mod.lessons.length, 0),
     0
@@ -96,7 +96,7 @@ export default function Analytics() {
                     <div className="flex-1">
                       <h3 className="text-lg font-semibold text-white mb-1">{course.title}</h3>
                       <div className="flex items-center gap-4 text-sm text-white/60">
-                        <span>{course.enrollCount} enrollments</span>
+                        <span>{course.enrolledCount} enrollments</span>
                         <span>•</span>
                         <span>{lessonCount} lessons</span>
                         <span>•</span>
@@ -152,7 +152,7 @@ export default function Analytics() {
                     </div>
                   </div>
                   <div className="text-sm text-white/60">
-                    {course.enrollCount} students
+                    {course.enrolledCount} students
                   </div>
                 </div>
               ))}
