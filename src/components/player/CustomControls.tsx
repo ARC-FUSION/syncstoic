@@ -112,16 +112,22 @@ export default function CustomControls({
       {/* Gradient background */}
       <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent pointer-events-none" />
 
-      <div className="relative px-3 sm:px-4 pb-3 sm:pb-4 pt-12">
+      <div className="relative px-3 sm:px-4 pb-3 sm:pb-4 pt-8 sm:pt-12">
         {/* Seekbar */}
         <div
-          className="group/seek relative h-5 sm:h-6 flex items-center cursor-pointer mb-2"
+          className="group/seek relative h-8 sm:h-10 flex items-center cursor-pointer mb-2"
           onClick={handleSeekbarClick}
           onMouseMove={handleSeekbarHover}
           onMouseEnter={() => setIsSeekHovering(true)}
           onMouseLeave={() => {
             setIsSeekHovering(false);
             setSeekPreview(null);
+          }}
+          onTouchStart={(e) => {
+            const rect = e.currentTarget.getBoundingClientRect();
+            const touch = e.touches[0];
+            const percent = Math.max(0, Math.min(1, (touch.clientX - rect.left) / rect.width));
+            onSeek(percent * duration);
           }}
           role="slider"
           aria-label="Video progress"
@@ -132,7 +138,7 @@ export default function CustomControls({
           tabIndex={0}
         >
           {/* Track */}
-          <div className="absolute w-full h-1 group-hover/seek:h-2 transition-all bg-white/20 rounded-full overflow-hidden">
+          <div className="absolute w-full h-1.5 sm:h-2 group-hover/seek:h-2.5 sm:group-hover/seek:h-3 transition-all bg-white/20 rounded-full overflow-hidden">
             {/* Buffered */}
             <div
               className="absolute h-full bg-white/30 rounded-full"
@@ -146,15 +152,15 @@ export default function CustomControls({
           </div>
           {/* Thumb */}
           <div
-            className={`absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 sm:w-4 sm:h-4 bg-white rounded-full shadow-lg transition-opacity ${
+            className={`absolute top-1/2 -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 bg-white rounded-full shadow-lg transition-opacity ${
               isSeekHovering ? 'opacity-100' : 'opacity-0'
             }`}
-            style={{ left: `calc(${progressPercent}% - 7px)` }}
+            style={{ left: `calc(${progressPercent}% - 8px)` }}
           />
           {/* Seek preview tooltip */}
           {seekPreview !== null && isSeekHovering && (
             <div
-              className="absolute -top-8 bg-black/90 backdrop-blur-sm text-white text-xs px-2 py-1 rounded-md transform -translate-x-1/2 pointer-events-none"
+              className="absolute -top-10 bg-black/90 backdrop-blur-sm text-white text-xs px-2 py-1 rounded-md transform -translate-x-1/2 pointer-events-none"
               style={{ left: `${(seekPreview / Math.max(duration, 1)) * 100}%` }}
             >
               {formatTime(seekPreview)}
@@ -172,14 +178,14 @@ export default function CustomControls({
                 e.stopPropagation();
                 onTogglePlay();
               }}
-              className="p-2 hover:bg-white/10 rounded-lg transition-colors focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:outline-none"
+              className="p-2.5 sm:p-2 hover:bg-white/10 rounded-lg transition-colors focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:outline-none min-w-[44px] min-h-[44px] flex items-center justify-center"
               aria-label={isPlaying ? 'Pause (Space)' : 'Play (Space)'}
               title={isPlaying ? 'Pause (Space)' : 'Play (Space)'}
             >
               {isPlaying ? (
-                <Pause className="w-5 h-5 text-white" fill="white" />
+                <Pause className="w-6 h-6 sm:w-5 sm:h-5 text-white" fill="white" strokeWidth={2} />
               ) : (
-                <Play className="w-5 h-5 text-white" fill="white" />
+                <Play className="w-6 h-6 sm:w-5 sm:h-5 text-white" fill="white" strokeWidth={2} />
               )}
             </button>
 
@@ -190,17 +196,17 @@ export default function CustomControls({
                   e.stopPropagation();
                   onToggleMute();
                 }}
-                className="p-2 hover:bg-white/10 rounded-lg transition-colors focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:outline-none"
+                className="p-2.5 sm:p-2 hover:bg-white/10 rounded-lg transition-colors focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:outline-none min-w-[44px] min-h-[44px] flex items-center justify-center"
                 aria-label={isMuted ? 'Unmute (M)' : 'Mute (M)'}
                 title={isMuted ? 'Unmute (M)' : 'Mute (M)'}
               >
                 {isMuted || volume === 0 ? (
-                  <VolumeX className="w-5 h-5 text-white" />
+                  <VolumeX className="w-6 h-6 sm:w-5 sm:h-5 text-white" strokeWidth={2} />
                 ) : (
-                  <Volume2 className="w-5 h-5 text-white" />
+                  <Volume2 className="w-6 h-6 sm:w-5 sm:h-5 text-white" strokeWidth={2} />
                 )}
               </button>
-              <div className="w-0 group-hover/vol:w-20 overflow-hidden transition-all duration-200">
+              <div className="w-0 group-hover/vol:w-20 overflow-hidden transition-all duration-200 hidden sm:block">
                 <input
                   type="range"
                   min="0"
@@ -218,7 +224,7 @@ export default function CustomControls({
             </div>
 
             {/* Time display */}
-            <span className="text-white/70 text-xs sm:text-sm font-mono tabular-nums hidden sm:block">
+            <span className="text-white/70 text-xs sm:text-sm font-mono tabular-nums">
               {formatTime(currentTime)}
               <span className="text-white/30 mx-1">/</span>
               {formatTime(duration)}
@@ -234,7 +240,7 @@ export default function CustomControls({
                   e.stopPropagation();
                   setShowSpeedMenu(!showSpeedMenu);
                 }}
-                className={`px-2 py-1 rounded-lg transition-colors text-xs sm:text-sm font-semibold focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:outline-none ${
+                className={`px-2.5 py-2 rounded-lg transition-colors text-xs sm:text-sm font-semibold focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:outline-none min-h-[44px] flex items-center ${
                   playbackRate !== 1
                     ? 'text-primary-400 bg-primary-500/10 hover:bg-primary-500/20'
                     : 'text-white/70 hover:text-white hover:bg-white/10'
@@ -257,7 +263,7 @@ export default function CustomControls({
                         onSetPlaybackRate(speed);
                         setShowSpeedMenu(false);
                       }}
-                      className={`block w-full px-3 py-2 text-sm text-left hover:bg-white/5 transition-colors flex items-center justify-between ${
+                      className={`block w-full px-3 py-2.5 text-sm text-left hover:bg-white/5 transition-colors flex items-center justify-between min-h-[44px] ${
                         playbackRate === speed ? 'text-primary-400 font-medium' : 'text-white/70'
                       }`}
                       aria-label={`Set speed to ${speed}x`}
@@ -276,11 +282,11 @@ export default function CustomControls({
                 e.stopPropagation();
                 onRequestPiP();
               }}
-              className="p-2 hover:bg-white/10 rounded-lg transition-colors text-white/70 hover:text-white focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:outline-none hidden sm:block"
+              className="p-2.5 sm:p-2 hover:bg-white/10 rounded-lg transition-colors text-white/70 hover:text-white focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:outline-none hidden sm:flex min-w-[44px] min-h-[44px] items-center justify-center"
               aria-label="Picture-in-Picture"
               title="Picture-in-Picture"
             >
-              <PictureInPicture2 className="w-5 h-5" />
+              <PictureInPicture2 className="w-6 h-6 sm:w-5 sm:h-5" strokeWidth={2} />
             </button>
 
             {/* Focus Mode */}
@@ -289,7 +295,7 @@ export default function CustomControls({
                 e.stopPropagation();
                 onToggleFocusMode();
               }}
-              className={`p-2 rounded-lg transition-colors focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:outline-none ${
+              className={`p-2.5 sm:p-2 rounded-lg transition-colors focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:outline-none min-w-[44px] min-h-[44px] flex items-center justify-center ${
                 isFocusMode
                   ? 'text-primary-400 bg-primary-500/10 hover:bg-primary-500/20'
                   : 'text-white/70 hover:text-white hover:bg-white/10'
@@ -297,7 +303,7 @@ export default function CustomControls({
               aria-label={isFocusMode ? 'Exit focus mode' : 'Enter focus mode'}
               title={isFocusMode ? 'Exit focus mode (Esc)' : 'Focus mode'}
             >
-              <Focus className="w-5 h-5" />
+              <Focus className="w-6 h-6 sm:w-5 sm:h-5" strokeWidth={2} />
             </button>
 
             {/* Fullscreen */}
@@ -306,11 +312,15 @@ export default function CustomControls({
                 e.stopPropagation();
                 onToggleFullscreen();
               }}
-              className="p-2 hover:bg-white/10 rounded-lg transition-colors text-white/70 hover:text-white focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:outline-none"
+              className="p-2.5 sm:p-2 hover:bg-white/10 rounded-lg transition-colors text-white/70 hover:text-white focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:outline-none min-w-[44px] min-h-[44px] flex items-center justify-center"
               aria-label={isFullscreen ? 'Exit fullscreen (F)' : 'Enter fullscreen (F)'}
               title={isFullscreen ? 'Exit fullscreen (F)' : 'Fullscreen (F)'}
             >
-              {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
+              {isFullscreen ? (
+                <Minimize className="w-6 h-6 sm:w-5 sm:h-5" strokeWidth={2} />
+              ) : (
+                <Maximize className="w-6 h-6 sm:w-5 sm:h-5" strokeWidth={2} />
+              )}
             </button>
           </div>
         </div>
